@@ -24,6 +24,7 @@ workflow scatter_gather {
     n // number of splits
     // apply
     // combine
+    // combine-key-fun: a function to apply to meta to use as an index for grouping prior to combining.
 
     main:
 
@@ -39,11 +40,13 @@ process split_fastq {
     input:
         tuple val(meta), path('in.fq.gz')
         val(n_split)
+        path('StreamSplitter.jar')
     output:
-        tuple( val(id), path('split*'), emit: split )
+        tuple( val(meta), path('split*'), emit: split )
 
     script:
     """
+    java -jar StreamSplitter.jar --lines-per-record 4 --num-split ${n_split} --basename split --gunzip-input --gzip-output in.fq.gz
     """
 
 }
