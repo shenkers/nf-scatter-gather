@@ -58,9 +58,10 @@ workflow gather {
     take:
         x
         n
+        keyFun // fun meta -> grouping id
 
     main:
-        grouped = x.map{ meta, fq -> [ meta.id, fq ] }
+        grouped = x.map{ meta, fq -> [ keyFun.&call(meta), fq ] }
             .groupTuple(by:0, size:n)
         combined = gather_fastqs(grouped)
 
@@ -95,11 +96,13 @@ workflow scattergather {
         x
         n
         mapper
+        options // map[ keyFun : ( meta -> id ) ]
 
     main:
 
+        keyFun = { meta -> meta.id }
         scatter( x, n, mapper )
-        gather( scatter.out, n )
+        gather( scatter.out, n, keyFun )
 
     emit:
         gather.out
