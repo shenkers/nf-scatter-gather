@@ -5,17 +5,88 @@ workflow scatter {
 
     data // meta, fastq
     n // number of splits
+    mapper // function to apply to the shards, should take [meta,fq]
 
     main:
 
     split_fastq( data, n, splitter_jar )
 
+    to_map = split_fastq.out
+        .flatMap{ meta, parts -> parts.collect{ [ meta, it ] } }
+
+    mapper_out = mapper.&run( to_map )
+
     emit:
 
-    out = split_fastq.out
+    out = mapper_out
+}
+
+workflow mapper_wf {
+    take:
+        x
+
+    main:
+        mapper_process(x)
+
+    emit:
+        mapper_process.out
+}
+
+process mapper_process {
+    input:
+        tuple val(id), path(part)
+
+    output:
+        tuple val(id), path(part)
+
+    script:
+    "echo hi"
+}
+
+workflow gather_wf {
+    take:
+        x // [ id, [piece1,...]
+
+    main:
+        x.dump(tag:'here')
+        gather_fastqs( x )
+
+    emit:
+        out = gather_fastqs.out
+}
+
+process gather_fastqs {
+    input:
+        tuple val(id), path("part*")
+
+    output:
+        tuple val(id), path("out")
+
+    script:
+    "cat part* > out"
+}
+
+workflow gather {
+    take:
+        x
+        n
+        //combiner
+
+    main:
+        grouped = x.map{ meta, fq -> [ meta.id, fq ] }
+            .dump(tag:'togroup')
+            .groupTuple(by:0, size:n)
+            .dump(tag:'grouped')
+            println('n:'+n)
+        combined = gather_fastqs(grouped)
+        //combined = combiner.&run(grouped)
+
+    emit:
+        out = combined
 }
 
 
+/*
 workflow scatter_gather {
 
     take:
@@ -32,6 +103,7 @@ workflow scatter_gather {
     emit:
 
 }
+*/
 
 process split_fastq {
 
@@ -66,4 +138,19 @@ process combine_fastq {
         cat split2* > read2.fq.gz
         """
 
+}
+
+workflow scattergather {
+    take:
+        x
+        n
+        mapper
+
+    main:
+
+        scatter( x, n, mapper_wf )
+        gather( scatter.out, n )
+
+    emit:
+        gather.out
 }
