@@ -1,0 +1,3 @@
+[submodule "StreamSplitter"]
+	path = StreamSplitter
+	url = git@github.com:shenkers/StreamSplitter.git
