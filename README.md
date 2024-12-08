@@ -2,6 +2,39 @@
 
 A Nextflow module implementing the split-apply-combine pattern for parallel processing of FASTQ files. This module handles the splitting of input files into chunks, parallel processing, and subsequent recombination of results.
 
+## Setup and Dependencies
+
+### Java Setup
+This module requires Java 21. We recommend using SDKMAN! to manage Java versions:
+
+1. Install SDKMAN! following the [official instructions](https://sdkman.io/install)
+2. Install Java 21:
+```bash
+sdk install java 21-open
+```
+
+### Initialize StreamSplitter
+This module uses StreamSplitter as a git submodule. After cloning the repository:
+
+1. Initialize and update the submodule:
+```bash
+git submodule init
+git submodule update
+```
+
+Or clone the repository with submodules in one step:
+```bash
+git clone --recurse-submodules <repository-url>
+```
+
+2. Build StreamSplitter:
+```bash
+cd StreamSplitter
+./gradlew build
+```
+
+This will create the required JAR file at `StreamSplitter/build/StreamSplitter.jar` that the module uses for FASTQ splitting.
+
 ## Overview
 
 This module provides a reusable workflow pattern that:
