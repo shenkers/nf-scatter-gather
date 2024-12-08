@@ -1,14 +1,14 @@
 # Scatter-Gather Module
 
-A Nextflow module implementing the split-apply-combine pattern for parallel processing of FASTQ files. This module handles the splitting of input files into chunks, parallel processing, and subsequent recombination of results.
+A Nextflow module implementing the split-apply-combine pattern for parallel processing of FASTQ files. This module handles the splitting of input files into chunks, parallel processing, and subsequent concatenation of results.
 
 ## Setup and Dependencies
 
 ### Java Setup
-This module requires Java 21. We recommend using SDKMAN! to manage Java versions:
+This module requires Java, which can easily be installed using SDKMAN! to manage Java versions:
 
 1. Install SDKMAN! following the [official instructions](https://sdkman.io/install)
-2. Install Java 21:
+2. Install Java:
 ```bash
 sdk install java 21-open
 ```
@@ -16,15 +16,10 @@ sdk install java 21-open
 ### Initialize StreamSplitter
 This module uses StreamSplitter as a git submodule. After cloning the repository:
 
-1. Initialize and update the submodule:
-```bash
-git submodule init
-git submodule update
-```
+1. Clone and initialize the submodule:
 
-Or clone the repository with submodules in one step:
 ```bash
-git clone --recurse-submodules <repository-url>
+git clone --recurse-submodules git@github.com:shenkers/nf-scatter-gather.git
 ```
 
 2. Build StreamSplitter:
@@ -60,7 +55,7 @@ workflow {
         [ [id:'sample1'], file('sample1.fq.gz') ],
         [ [id:'sample2'], file('sample2.fq.gz') ]
     )
-    
+
     scattergather(
         input_ch,          // Input channel
         5,                 // Split into 5 chunks
@@ -81,10 +76,10 @@ Example mapper workflow:
 workflow mapper_wf {
     take:
         input // [meta, fastq] tuples
-        
+
     main:
         your_process(input)
-        
+
     emit:
         your_process.out
 }
@@ -113,10 +108,10 @@ Here's how to use the module to parallelize UMI-tools extract:
 process umi_extract {
     input:
         tuple val(meta), path(fastq)
-    
+
     output:
         tuple val(meta), path("*_processed.fq.gz")
-        
+
     script:
     """
     umi_tools extract \
@@ -140,7 +135,7 @@ workflow {
     input_ch = channel.of(
         [ [id:'sample1'], file('sample1.fq.gz') ]
     )
-    
+
     scattergather(
         input_ch,
         10,              // Process in 10 parallel chunks
