@@ -98,7 +98,7 @@ workflow scattergather {
 
     main:
 
-        scatter( x, n, mapper_wf )
+        scatter( x, n, mapper )
         gather( scatter.out, n )
 
     emit:
