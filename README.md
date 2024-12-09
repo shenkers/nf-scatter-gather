@@ -10,7 +10,7 @@ This module requires Java, which can easily be installed using SDKMAN! to manage
 1. Install SDKMAN! following the [official instructions](https://sdkman.io/install)
 2. Install Java:
 ```bash
-sdk install java 21-open
+sdk install java 17-open
 ```
 
 ### Initialize StreamSplitter
