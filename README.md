@@ -56,32 +56,48 @@ workflow {
         [ [id:'sample2'], file('sample2.fq.gz') ]
     )
 
-    scattergather(
+    mapped = scattergather(
         input_ch,          // Input channel
         5,                 // Split into 5 chunks
-        your_mapper_wf,    // Your mapping workflow
+        simple_mapper,     // Your mapping process or workflow
         [:]                // Default options
     )
+
+    // Use the output in downstream processes
+    // bwa(mapped, reference_genome)
 }
 ```
 
 ### Implementing the Mapper
 
-Users need to implement their own mapper workflow that will be applied to each chunk. The mapper workflow should:
+The mapper can be either a single process or a workflow combining multiple processes. It should:
 - Accept input tuples of [meta, fastq]
 - Return output in the same format
 
-Example mapper workflow:
+Example single process mapper:
+```nextflow
+process simple_mapper {
+    input:
+        tuple val(meta), path(fastq)
+    output:
+        tuple val(meta), path("*_processed.fq.gz")
+    script:
+    """
+    # Your processing steps here
+    """
+}
+```
+
+Example multi-process workflow mapper:
 ```nextflow
 workflow mapper_wf {
     take:
         input // [meta, fastq] tuples
-
     main:
-        your_process(input)
-
+        process_1(input)
+        process_2(process_1.out)
     emit:
-        your_process.out
+        process_2.out
 }
 ```
 
