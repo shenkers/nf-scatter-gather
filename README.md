@@ -58,9 +58,9 @@ workflow {
 
     mapped = scattergather(
         input_ch,          // Input channel
-        5,                 // Split into 5 chunks
-        simple_mapper,     // Your mapping process or workflow
-        [:]                // Default options
+        5,                 // Split each input file into 5 chunks
+        simple_mapper,     // Your mapping process or workflow to apply to each chunk
+        [:]                // Options, default grouping with key meta.id
     )
 
     // Use the output in downstream processes
@@ -161,4 +161,4 @@ workflow {
 }
 ```
 
-This will split each input file into 10 chunks, run UMI-tools extract on each chunk in parallel, and recombine the processed chunks back into complete files.
+This will split each input file into 10 chunks, run UMI-tools extract on each chunk in parallel, and concatenate the processed chunks back into complete files.
