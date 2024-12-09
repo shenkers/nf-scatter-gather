@@ -109,9 +109,12 @@ workflow scattergather {
                 acc[v] = ( acc[v] ?: 0 ) + 1
                 acc
             })
+        keyToMeta = x.map{ meta, fq -> [ keyFun.&call(meta), meta ] }
         scatter( x, n, mapper )
         gather( scatter.out, n, keyFun, keyCounts )
+        gatheredWithMeta = gather.out.combine( keyToMeta, by: 0 )
+            .map{ id, fq, meta -> [ meta, fq ] }
 
     emit:
-        gather.out
+        gatheredWithMeta
 }
