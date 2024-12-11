@@ -7,5 +7,6 @@ x = channel.of(
 )
 
 workflow {
-    scattergather_pairs( x, 5, mapper_wf, [:] )
+    out = scattergather_pairs( x, 5, mapper_wf, [:] )
+    out[0].dump(tag:'result')
 }

@@ -25,8 +25,7 @@ workflow scatter {
     split_fastq( data, n, splitter_jar )
 
     to_map = split_fastq.out
-        .flatMap{ meta, parts -> parts.collect{ [ meta, it ] } }
-
+        .flatMap{ meta, parts -> parts.withIndex().collect{ part, idx -> [ meta + [ uuid: idx ], part ] } }
 
     emit:
 
@@ -46,10 +45,10 @@ workflow mapper_wf {
 
 process mapper_process {
     input:
-        tuple val(id), path(part)
+        tuple val(id), path(part1,stageAs:'r1'), path(part2,stageAs:'r2')
 
     output:
-        tuple val(id), path(part)
+        tuple val(id), path(part1), path(part2)
 
     script:
     "echo hi"

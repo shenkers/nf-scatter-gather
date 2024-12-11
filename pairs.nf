@@ -13,14 +13,17 @@ workflow scattergather_pairs {
 
     main:
 
+        // TODO since we're doing this by index instead of uuid, let's simplify/cleanup the logic
         to_uuid = x.map{ meta, r1, r2 -> [ meta, [r1,r2] ] }
 
-        with_uuid = assign_uuid( to_uuid )
+        with_uuid = to_uuid //assign_uuid( to_uuid )
 
-        by_read = with_uuid.multiMap{ meta, r1, r2 ->
-            r1: [ meta, r1 ]
-            r2: [ meta, r2 ]
-        }
+        by_read = with_uuid
+            .map{ meta, reads -> def (r1, r2) = reads; [ meta, r1, r2 ] }
+            .multiMap{ meta, r1, r2 ->
+                r1: [ meta, r1 ]
+                r2: [ meta, r2 ]
+            }
 
         scatter_r1( by_read.r1, n, mapper )
         scatter_r2( by_read.r2, n, mapper )
@@ -28,10 +31,11 @@ workflow scattergather_pairs {
         // TODO make meta.uuid parameterizable in case user want to use that key for something else
         // TODO make map uuid -> meta so can reconstruct the whole metamap at the end
 
-        to_map = scatter_r1.out.map{ meta, fq -> [ meta.uuid, meta, fq ] }.combine(
-            scatter_r2.out.map{ meta, fq -> [ meta.uuid, fq ] },
+        to_map = scatter_r1.out.map{ meta, fq -> [ [ keyFun.&call(meta), meta.uuid ], meta, fq ] }.combine(
+            scatter_r2.out.map{ meta, fq -> [ [ keyFun.&call(meta), meta.uuid ], fq ] },
             by: 0
         ).map{ k, meta, r1, r2 -> [ meta, r1, r2 ] }
+
 
         mapper_out = mapper.&run( to_map ).multiMap{ meta, r1, r2 ->
             r1: [ meta, r1 ]
@@ -39,22 +43,24 @@ workflow scattergather_pairs {
         }
 
         keyFun = options.keyFun ?: { meta -> meta.id }
-        keyCounts = x.map{ meta, fq -> keyFun.&call(meta) }
+        keyCounts = x.map{ meta, r1, r2 -> keyFun.&call(meta) }
             .reduce([:],{ acc, v ->
                 acc[v] = ( acc[v] ?: 0 ) + 1
                 acc
             })
-        keyToMeta = x.map{ meta, fq -> [ keyFun.&call(meta), meta ] }
+        keyToMeta = x.map{ meta, r1, r2 -> [ keyFun.&call(meta), meta ] }
 
         gather_r1( mapper_out.r1, n, keyFun, keyCounts )
         gather_r2( mapper_out.r2, n, keyFun, keyCounts )
-        gather = gather_r1.out.combine(gather_r2.out)
 
-        gathered = gather_r1.out.map{ meta, fq -> [ meta.uuid, meta, fq ] }.combine(
-            gather_r2.out.map{ meta, fq -> [ meta.uuid, fq ] },
+        gathered = gather_r1.out.map{ id, fq -> [ id, fq ] }.combine(
+            gather_r2.out.map{ id, fq -> [ id, fq ] },
             by: 0
-        ).map{ k, meta, r1, r2 -> [ meta, r1, r2 ] }
+        )
+        .combine(keyToMeta,by:0)
+        .map{ id, r1, r2, meta -> [ meta, r1, r2 ] }
 
     emit:
+        //channel.empty() // gathered
         gathered
 }
