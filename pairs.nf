@@ -117,3 +117,46 @@ workflow scattergather {
     emit:
         gatheredWithMeta
 }
+
+workflow scattergather_pairs {
+    take:
+        x
+        n
+        mapper
+        options // map[ keyFun : ( meta -> id ) ]
+
+    main:
+
+        by_read = x.multiMap{ meta, r1, r2 ->
+            r1: [ meta, r1 ]
+            r2: [ meta, r2 ]
+        }
+
+        // TODO: need to make sure shard-index is in combine key
+        scatter_r1( by_read.r1, n, mapper )
+        scatter_r2( by_read.r2, n, mapper )
+
+        to_map = scatter_r1.out.combine(scatter_r2.out)
+
+        mapper_out = mapper.&run( to_map ).multiMap{ meta, r1, r2 ->
+            r1: [ meta, r1 ]
+            r2: [ meta, r2 ]
+        }
+
+        keyFun = options.keyFun ?: { meta -> meta.id }
+        keyCounts = x.map{ meta, fq -> keyFun.&call(meta) }
+            .reduce([:],{ acc, v ->
+                acc[v] = ( acc[v] ?: 0 ) + 1
+                acc
+            })
+        keyToMeta = x.map{ meta, fq -> [ keyFun.&call(meta), meta ] }
+
+        gather_r1( mapper_out.r1, n, keyFun, keyCounts )
+        gather_r2( mapper_out.r2, n, keyFun, keyCounts )
+        gather = gather_r1.out.combine(gather_r2.out)
+        gatheredWithMeta = gather.out.combine( keyToMeta, by: 0 )
+            .map{ id, fq, meta -> [ meta, fq ] }
+
+    emit:
+        gatheredWithMeta
+}
