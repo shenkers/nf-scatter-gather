@@ -1,5 +1,18 @@
 splitter_jar = file("${moduleDir}/StreamSplitter/build/StreamSplitter.jar")
 
+process assign_uuid {
+
+    input:
+        tuple val(meta), val(reads)
+
+    output:
+        tuple val(meta_with_uuid), val(reads)
+
+    exec:
+
+    meta_with_uuid = meta + [ uuid: UUID.randomUUID() ]
+}
+
 workflow scatter {
     take:
 
