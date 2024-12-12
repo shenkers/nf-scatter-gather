@@ -13,13 +13,7 @@ workflow scattergather_pairs {
 
     main:
 
-        // TODO since we're doing this by index instead of uuid, let's simplify/cleanup the logic
-        to_uuid = x.map{ meta, r1, r2 -> [ meta, [r1,r2] ] }
-
-        with_uuid = to_uuid //assign_uuid( to_uuid )
-
-        by_read = with_uuid
-            .map{ meta, reads -> def (r1, r2) = reads; [ meta, r1, r2 ] }
+        by_read = x
             .multiMap{ meta, r1, r2 ->
                 r1: [ meta, r1 ]
                 r2: [ meta, r2 ]
