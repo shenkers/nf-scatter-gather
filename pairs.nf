@@ -1,4 +1,4 @@
-include {scatter as scatter_r1; scatter as scatter_r2} from './'
+include {scatter} from './'
 include {gather as gather_r1; gather as gather_r2} from './'
 include {gather_fastqs} from './'
 
@@ -12,25 +12,25 @@ workflow scattergather_pairs {
 
     main:
 
-        by_read = x
-            .multiMap{ meta, r1, r2 ->
-                r1: [ meta, r1 ]
-                r2: [ meta, r2 ]
-            }
-
         def partIdKey = options.partIdKey ?: 'uuid'
         def readIdKey = options.readIdKey ?: 'read_id'
         def keyFun = options.keyFun ?: { meta -> meta.id }
 
-        r1_parts = scatter_r1( by_read.r1, n, options.scatterer )
+        by_read = x
+            .flatMap{ meta, r1, r2 ->
+                [
+                    [ meta + [ (readIdKey): 1 ], r1 ],
+                    [ meta + [ (readIdKey): 2 ], r2 ]
+                ]
+            }
+
+        parts = scatter( by_read, n, options.scatterer )
             .flatMap{ meta, parts ->
                 parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
             }
 
-        r2_parts = scatter_r2( by_read.r2, n, options.scatterer )
-            .flatMap{ meta, parts ->
-                parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
-            }
+        r1_parts = parts.filter{ meta, fq -> meta[readIdKey] == 1 }
+        r2_parts = parts.filter{ meta, fq -> meta[readIdKey] == 2 }
 
         // TODO make map uuid -> meta so can reconstruct the whole metamap at the end
 
@@ -40,8 +40,8 @@ workflow scattergather_pairs {
         ).map{ k, meta, r1, r2 -> [ meta, r1, r2 ] }
 
         mapper_out = mapper.&run( to_map ).multiMap{ meta, r1, r2 ->
-            read1: [ meta + [ (readIdKey): 1 ], r1 ]
-            read2: [ meta + [ (readIdKey): 2 ], r2 ]
+            read1: [ meta, r1 ]
+            read2: [ meta, r2 ]
         }
 
         keyCounts = x.map{ meta, r1, r2 -> keyFun.&call(meta) }
