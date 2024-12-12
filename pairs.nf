@@ -47,11 +47,13 @@ workflow scattergather_pairs {
                 ]
             }
 
-        keyCounts = mapper_out.map{ meta, r1 -> [ keyFun.&call(meta), meta[readIdKey] ] }
+        keyCounts = x.map{ meta, r1, r2 -> keyFun.&call(meta) }
             .reduce([:],{ acc, v ->
-                acc[v] = ( acc[v] ?: 0 ) + 1
+                acc[ [v,1] ] = ( acc[ [v,1] ] ?: 0 ) + n
+                acc[ [v,2] ] = ( acc[ [v,2] ] ?: 0 ) + n
                 acc
             })
+
         keyToMeta = x.map{ meta, r1, r2 -> [ keyFun.&call(meta), meta ] }
 
         gather( mapper_out.map{ meta, fq -> [ [ keyFun.&call(meta), meta[readIdKey] ], meta[partIdKey], fq ] }, options.gatherer, keyCounts, partIdKey )
