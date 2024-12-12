@@ -1,5 +1,5 @@
 include {scatter} from './'
-include {gather as gather_r1; gather as gather_r2} from './'
+include {gather} from './'
 include {gather_fastqs} from './'
 
 // TODO create a top-level scatter gather that routes to single/pairs depending on cardinality
@@ -39,23 +39,32 @@ workflow scattergather_pairs {
             by: 0
         ).map{ k, meta, r1, r2 -> [ meta, r1, r2 ] }
 
-        mapper_out = mapper.&run( to_map ).multiMap{ meta, r1, r2 ->
-            read1: [ meta, r1 ]
-            read2: [ meta, r2 ]
-        }
+        mapper_out = mapper.&run( to_map )
+            .flatMap{ meta, r1, r2 ->
+                [
+                    [ meta + [ (readIdKey): 1 ], r1 ],
+                    [ meta + [ (readIdKey): 2 ], r2 ]
+                ]
+            }
 
-        keyCounts = x.map{ meta, r1, r2 -> keyFun.&call(meta) }
+        keyCounts = mapper_out.map{ meta, r1 -> [ keyFun.&call(meta), meta[readIdKey] ] }
             .reduce([:],{ acc, v ->
                 acc[v] = ( acc[v] ?: 0 ) + 1
                 acc
             })
         keyToMeta = x.map{ meta, r1, r2 -> [ keyFun.&call(meta), meta ] }
 
-        gather_r1( mapper_out.read1, n, keyFun, options.gatherer, keyCounts, partIdKey )
-        gather_r2( mapper_out.read2, n, keyFun, options.gatherer, keyCounts, partIdKey )
+        gather( mapper_out.map{ meta, fq -> [ [ keyFun.&call(meta), meta[readIdKey] ], meta[partIdKey], fq ] }, options.gatherer, keyCounts, partIdKey )
 
-        gathered = gather_r1.out.map{ id, fq -> [ id, fq ] }.combine(
-            gather_r2.out.map{ id, fq -> [ id, fq ] },
+        gather_r1 = gather.out
+            .filter{ id_idx, fq -> id_idx[1] == 1 }
+            .map{ id_idx, fq -> [ id_idx[0], fq ] }
+        gather_r2 = gather.out
+            .filter{ id_idx, fq -> id_idx[1] == 2 }
+            .map{ id_idx, fq -> [ id_idx[0], fq ] }
+
+        gathered = gather_r1.map{ id, fq -> [ id, fq ] }.combine(
+            gather_r2.map{ id, fq -> [ id, fq ] },
             by: 0
         )
         .combine(keyToMeta,by:0)

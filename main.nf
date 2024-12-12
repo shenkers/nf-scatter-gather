@@ -56,16 +56,14 @@ process gather_fastqs {
 workflow gather {
     take:
         x
-        n
-        keyFun // fun meta -> grouping id
         gatherer // gather_fastqs
         keyCounts // map id -> count
         partIdKey // 'uuid'
 
     main:
-        grouped = x.map{ meta, fq -> [ keyFun.&call(meta), meta[partIdKey], fq ] }
+        grouped = x.map{ k, partIdx, fq -> [ k, partIdx, fq ] }
             .combine( keyCounts )
-            .map{ k, partIdx, fq, count -> [ groupKey( k, count[k] * n ), partIdx, fq ] }
+            .map{ k, partIdx, fq, count -> [ groupKey( k, count[k] ), partIdx, fq ] }
             .groupTuple()
             .map{ k, indices, fqs ->
                 ordered_fqs = [ indices, fqs ].transpose()
