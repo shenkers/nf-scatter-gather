@@ -17,28 +17,6 @@ workflow scatter {
     to_map
 }
 
-workflow mapper_wf_pairs {
-    take:
-        x
-
-    main:
-        mapper_process_pairs(x)
-
-    emit:
-        mapper_process_pairs.out
-}
-
-process mapper_process_pairs {
-    input:
-        tuple val(id), path(part1,stageAs:'r1'), path(part2,stageAs:'r2')
-
-    output:
-        tuple val(id), path(part1), path(part2)
-
-    script:
-    "echo hi"
-}
-
 process gather_fastqs {
     input:
         tuple val(id), path("part*")
@@ -48,20 +26,6 @@ process gather_fastqs {
 
     script:
     "cat part* > out"
-}
-
-def groupPartsById( ch, keyFun, keyCounts, n, partIdKey, readIdKey ) {
-    ch.map{ meta, fq -> [ keyFun(meta), meta[readIdKey], meta[partIdKey], fq ] }
-        .combine( keyCounts )
-        .map{ k, readId, partIdx, fq, count -> [ groupKey( [k, readId], count[k] * n ), partIdx, fq ] }
-        .groupTuple()
-        .map{ k, indices, fqs ->
-            def ( id, readId ) = k
-            ordered_fqs = [ indices, fqs ].transpose()
-                .sort{ a_idx_fq, b_idx_fq -> a_idx_fq[0] <=> b_idx_fq[0] }
-                .collect{ idx, fq -> fq }
-            [ id, ordered_fqs ]
-        }
 }
 
 workflow gather {
