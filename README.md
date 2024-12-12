@@ -1,6 +1,6 @@
 # Scatter-Gather Module
 
-A Nextflow module implementing the split-apply-combine pattern for parallel processing of files. While originally designed for FASTQ files, the module now supports arbitrary file types through custom scatter and gather implementations. This module handles the splitting of input files into chunks, parallel processing, and subsequent concatenation of results.
+A Nextflow module implementing the split-apply-combine pattern for parallel processing of files. While originally designed for FASTQ files, the module supports arbitrary file types through custom scatter and gather implementations. This module handles the splitting of input files into chunks, parallel processing, and subsequent concatenation of results.
 
 ## Setup and Dependencies
 
@@ -68,7 +68,7 @@ workflow {
 }
 ```
 
-### Implementing the Mapper
+### Implementing a Custom Mapper
 
 The mapper can be either a single process or a workflow combining multiple processes. It should:
 - Accept input tuples of [meta, fastq]
@@ -127,7 +127,7 @@ workflow {
     input_ch = channel.of(
         [ [id:'sample1'], file('sample1.fq.gz') ]
     )
-    
+
     scattergather(
         input_ch,
         5,
@@ -145,7 +145,7 @@ workflow {
     input_ch = channel.of(
         [ [id:'sample1'], file('R1.fq.gz'), file('R2.fq.gz') ]
     )
-    
+
     scattergather_pairs(
         input_ch,
         5,
