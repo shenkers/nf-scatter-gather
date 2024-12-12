@@ -56,6 +56,7 @@ workflow gather {
         x
         n
         keyFun // fun meta -> grouping id
+        gatherer // gather_fastqs
         keyCounts // map id -> count
         partIdKey // 'uuid'
 
@@ -70,7 +71,7 @@ workflow gather {
                     .collect{ idx, fq -> fq }
                 [ k, ordered_fqs ]
             }
-        combined = gather_fastqs(grouped)
+        combined = gatherer.&run(grouped)
 
     emit:
         out = combined
@@ -108,6 +109,7 @@ workflow scattergather {
     main:
 
         keyFun = options.keyFun ?: { meta -> meta.id }
+        gatherer = options.gatherer ?: gather_fastqs
         def partIdKey = options.partIdKey ?: 'uuid'
         keyCounts = x.map{ meta, fq -> keyFun.&call(meta) }
             .reduce([:],{ acc, v ->
@@ -121,7 +123,7 @@ workflow scattergather {
                 parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
             }
         mapper_out = mapper.&run( to_map )
-        gather( mapper_out, n, keyFun, keyCounts, partIdKey )
+        gather( mapper_out, n, keyFun, gatherer, keyCounts, partIdKey )
         gatheredWithMeta = gather.out.combine( keyToMeta, by: 0 )
             .map{ id, fq, meta -> [ meta, fq ] }
 
