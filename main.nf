@@ -116,7 +116,7 @@ workflow scattergather {
         def partIdKey = options.partIdKey ?: 'uuid'
         keyCounts = x.map{ meta, fq -> keyFun.&call(meta) }
             .reduce([:],{ acc, v ->
-                acc[v] = ( acc[v] ?: 0 ) + 1
+                acc[v] = ( acc[v] ?: 0 ) + n
                 acc
             })
         keyToMeta = x.map{ meta, fq -> [ keyFun.&call(meta), meta ] }
@@ -126,7 +126,7 @@ workflow scattergather {
                 parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
             }
         mapper_out = mapper.&run( to_map )
-        gather( mapper_out, n, keyFun, options.gatherer, keyCounts, partIdKey )
+        gather( mapper_out.map{ meta, fq -> [ keyFun.&call(meta), meta[partIdKey], fq ] }, options.gatherer, keyCounts, partIdKey )
         gathered = gather.out
             .combine( keyToMeta, by: 0 )
             .map{ id, fq, meta -> [ meta, fq ] }
