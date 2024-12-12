@@ -18,7 +18,6 @@ workflow scatter {
 
     data // meta, fastq
     n // number of splits
-    mapper // function to apply to the shards, should take [meta,fq]
 
     main:
 

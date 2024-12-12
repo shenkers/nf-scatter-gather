@@ -41,8 +41,8 @@ workflow scattergather_pairs {
         def keyFun = options.keyFun ?: { meta -> meta.id }
 
         def assignPartId = withPartId( partIdKey )
-        r1_parts = assignPartId( scatter_r1( by_read.r1, n, mapper ) )
-        r2_parts = assignPartId( scatter_r2( by_read.r2, n, mapper ) )
+        r1_parts = assignPartId( scatter_r1( by_read.r1, n ) )
+        r2_parts = assignPartId( scatter_r2( by_read.r2, n ) )
 
         // TODO make map uuid -> meta so can reconstruct the whole metamap at the end
 
