@@ -61,8 +61,8 @@ workflow scattergather_pairs {
             })
         keyToMeta = x.map{ meta, r1, r2 -> [ keyFun.&call(meta), meta ] }
 
-        gather_r1( mapper_out.r1, n, keyFun, keyCounts )
-        gather_r2( mapper_out.r2, n, keyFun, keyCounts )
+        gather_r1( mapper_out.r1, n, keyFun, keyCounts, partIdKey )
+        gather_r2( mapper_out.r2, n, keyFun, keyCounts, partIdKey )
 
         gathered = gather_r1.out.map{ id, fq -> [ id, fq ] }.combine(
             gather_r2.out.map{ id, fq -> [ id, fq ] },

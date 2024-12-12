@@ -63,11 +63,12 @@ process gather_fastqs {
     "cat part* > out"
 }
 
-def groupPartsById( ch, keyFun, keyCounts, n ) {
-    ch.map{ meta, fq -> [ keyFun(meta), fq ] }
+def groupPartsById( ch, keyFun, keyCounts, n, partIdKey ) {
+    ch.map{ meta, fq -> [ keyFun(meta), meta[partIdKey], fq ] }
         .combine( keyCounts )
-        .map{ k, fq, count -> [ groupKey( k, count[k] * n ), fq ] }
+        .map{ k, partIdx, fq, count -> [ groupKey( k, count[k] * n ), partIdx, fq ] }
         .groupTuple()
+        .map{ k, indices, fqs -> [ k, fqs ] }
 }
 
 workflow gather {
@@ -76,9 +77,10 @@ workflow gather {
         n
         keyFun // fun meta -> grouping id
         keyCounts // map id -> count
+        partIdKey // 'uuid'
 
     main:
-        grouped = groupPartsById(x, keyFun, keyCounts, n)
+        grouped = groupPartsById(x, keyFun, keyCounts, n, partIdKey)
         combined = gather_fastqs(grouped)
 
     emit:
