@@ -1,5 +1,6 @@
 include {scatter as scatter_r1; scatter as scatter_r2} from './'
 include {gather as gather_r1; gather as gather_r2} from './'
+include {gather_fastqs} from './'
 
 // TODO create a top-level scatter gather that routes to single/pairs depending on cardinality
 workflow scattergather_pairs {
@@ -50,8 +51,8 @@ workflow scattergather_pairs {
             })
         keyToMeta = x.map{ meta, r1, r2 -> [ keyFun.&call(meta), meta ] }
 
-        gather_r1( mapper_out.read1, n, keyFun, keyCounts, partIdKey )
-        gather_r2( mapper_out.read2, n, keyFun, keyCounts, partIdKey )
+        gather_r1( mapper_out.read1, n, keyFun, options.gatherer, keyCounts, partIdKey )
+        gather_r2( mapper_out.read2, n, keyFun, options.gatherer, keyCounts, partIdKey )
 
         gathered = gather_r1.out.map{ id, fq -> [ id, fq ] }.combine(
             gather_r2.out.map{ id, fq -> [ id, fq ] },
