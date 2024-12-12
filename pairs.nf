@@ -3,6 +3,14 @@ include {gather as gather_r1; gather as gather_r2} from './'
 include {assign_uuid} from './'
 
 
+def withPartId( part_label ) {
+    {
+        ch -> ch.flatMap{ meta, parts ->
+            parts.withIndex().collect{ part, idx -> [ meta + [ (part_label): idx ], part ] }
+        }
+    }
+}
+
 // TODO create a top-level scatter gather that routes to single/pairs depending on cardinality
 workflow scattergather_pairs {
     take:
@@ -19,14 +27,15 @@ workflow scattergather_pairs {
                 r2: [ meta, r2 ]
             }
 
-        scatter_r1( by_read.r1, n, mapper )
-        scatter_r2( by_read.r2, n, mapper )
+        def assignPartId = withPartId( 'uuid' )
+        r1_parts = assignPartId( scatter_r1( by_read.r1, n, mapper ) )
+        r2_parts = assignPartId( scatter_r2( by_read.r2, n, mapper ) )
 
         // TODO make meta.uuid parameterizable in case user want to use that key for something else
         // TODO make map uuid -> meta so can reconstruct the whole metamap at the end
 
-        to_map = scatter_r1.out.map{ meta, fq -> [ [ keyFun.&call(meta), meta.uuid ], meta, fq ] }.combine(
-            scatter_r2.out.map{ meta, fq -> [ [ keyFun.&call(meta), meta.uuid ], fq ] },
+        to_map = r1_parts.map{ meta, fq -> [ [ keyFun.&call(meta), meta.uuid ], meta, fq ] }.combine(
+            r2_parts.map{ meta, fq -> [ [ keyFun.&call(meta), meta.uuid ], fq ] },
             by: 0
         ).map{ k, meta, r1, r2 -> [ meta, r1, r2 ] }
 

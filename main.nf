@@ -25,7 +25,6 @@ workflow scatter {
     split_fastq( data, n, splitter_jar )
 
     to_map = split_fastq.out
-        .flatMap{ meta, parts -> parts.withIndex().collect{ part, idx -> [ meta + [ uuid: idx ], part ] } }
 
     emit:
 
