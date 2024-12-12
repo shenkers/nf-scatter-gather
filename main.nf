@@ -17,7 +17,6 @@ workflow scatter {
     to_map
 }
 
-//keep
 workflow mapper_wf_single {
     take:
         x
@@ -58,12 +57,19 @@ workflow gather {
         n
         keyFun // fun meta -> grouping id
         keyCounts // map id -> count
+        partIdKey // 'uuid'
 
     main:
-        grouped = x.map{ meta, fq -> [ keyFun.&call(meta), fq ] }
+        grouped = x.map{ meta, fq -> [ keyFun.&call(meta), meta[partIdKey], fq ] }
             .combine( keyCounts )
-            .map{ k, fq, count -> [ groupKey( k, count[k] * n ), fq ] }
+            .map{ k, partIdx, fq, count -> [ groupKey( k, count[k] * n ), partIdx, fq ] }
             .groupTuple()
+            .map{ k, indices, fqs ->
+                ordered_fqs = [ indices, fqs ].transpose()
+                    .sort{ a_idx_fq, b_idx_fq -> a_idx_fq[0] <=> b_idx_fq[0] }
+                    .collect{ idx, fq -> fq }
+                [ k, ordered_fqs ]
+            }
         combined = gather_fastqs(grouped)
 
     emit:
@@ -102,14 +108,20 @@ workflow scattergather {
     main:
 
         keyFun = options.keyFun ?: { meta -> meta.id }
+        def partIdKey = options.partIdKey ?: 'uuid'
         keyCounts = x.map{ meta, fq -> keyFun.&call(meta) }
             .reduce([:],{ acc, v ->
                 acc[v] = ( acc[v] ?: 0 ) + 1
                 acc
             })
         keyToMeta = x.map{ meta, fq -> [ keyFun.&call(meta), meta ] }
-        scatter( x, n, mapper )
-        gather( scatter.out, n, keyFun, keyCounts )
+        scatter( x, n )
+        to_map = scatter.out
+            .flatMap{ meta, parts ->
+                parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
+            }
+        mapper_out = mapper.&run( to_map )
+        gather( mapper_out, n, keyFun, keyCounts, partIdKey )
         gatheredWithMeta = gather.out.combine( keyToMeta, by: 0 )
             .map{ id, fq, meta -> [ meta, fq ] }
 
