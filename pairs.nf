@@ -27,7 +27,7 @@ workflow scattergather_pairs {
         x
         n
         mapper
-        options // map[ keyFun : ( meta -> id ), partIdKey : 'uuid' ]
+        options // map[ keyFun : ( meta -> id ), partIdKey : 'uuid', readIdKey: 'read_id' ]
 
     main:
 
@@ -38,7 +38,7 @@ workflow scattergather_pairs {
             }
 
         def partIdKey = options.partIdKey ?: 'uuid'
-        def readIdKey = options.partIdKey ?: 'read_id'
+        def readIdKey = options.readIdKey ?: 'read_id'
         def keyFun = options.keyFun ?: { meta -> meta.id }
 
         def assignPartId = withPartId( partIdKey )
@@ -62,14 +62,8 @@ workflow scattergather_pairs {
             })
         keyToMeta = x.map{ meta, r1, r2 -> [ keyFun.&call(meta), meta ] }
 
-        mapper_out.read1.dump(tag:'tg1')
-        mapper_out.read2.dump(tag:'tg2')
-
-        gather_r1( mapper_out.read1, n, keyFun, keyCounts, partIdKey, readIdKey )
-        gather_r2( mapper_out.read2, n, keyFun, keyCounts, partIdKey, readIdKey )
-
-        gather_r1.out[0].dump(tag:'gr1')
-        gather_r2.out[0].dump(tag:'gr2')
+        gather_r1( mapper_out.read1, n, keyFun, keyCounts, partIdKey )
+        gather_r2( mapper_out.read2, n, keyFun, keyCounts, partIdKey )
 
         gathered = gather_r1.out.map{ id, fq -> [ id, fq ] }.combine(
             gather_r2.out.map{ id, fq -> [ id, fq ] },

@@ -5,9 +5,6 @@ include {publish} from '../publish/publish'
 
 x = channel.of(
     [ [id:'x'], file('test.fq.gz'), file('test2.fq.gz') ],
-    [ [id:'z'], file('test.fq.gz'), file('test2.fq.gz') ],
-    [ [id:'r'], file('test.fq.gz'), file('test2.fq.gz') ],
-    [ [id:'w'], file('test.fq.gz'), file('test2.fq.gz') ],
     [ [id:'y'], file('test.fq.gz'), file('test2.fq.gz') ]
 )
 
