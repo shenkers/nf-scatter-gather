@@ -21,18 +21,19 @@ workflow scatter {
     out = mapper_out
 }
 
-workflow mapper_wf {
+//keep
+workflow mapper_wf_single {
     take:
         x
 
     main:
-        mapper_process(x)
+        mapper_process_single(x)
 
     emit:
-        mapper_process.out
+        mapper_process_single.out
 }
 
-process mapper_process {
+process mapper_process_single {
     input:
         tuple val(id), path(part)
 
@@ -42,6 +43,7 @@ process mapper_process {
     script:
     "echo hi"
 }
+//keep
 
 process gather_fastqs {
     input:
