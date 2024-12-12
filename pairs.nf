@@ -41,6 +41,7 @@ workflow scattergather_pairs {
         def readIdKey = options.readIdKey ?: 'read_id'
         def keyFun = options.keyFun ?: { meta -> meta.id }
 
+        // TODO move method calls back in to workflow block where possible
         def assignPartId = withPartId( partIdKey )
         r1_parts = assignPartId( scatter_r1( by_read.r1, n ) )
         r2_parts = assignPartId( scatter_r2( by_read.r2, n ) )
