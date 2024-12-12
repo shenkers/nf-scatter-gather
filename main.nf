@@ -5,16 +5,18 @@ workflow scatter {
 
     data // meta, fastq
     n // number of splits
+    scatterer // an optional splitting process
 
     main:
 
-    split_fastq( data, n, splitter_jar )
-
-    to_map = split_fastq.out
+    if(scatterer)
+        scattered = scatterer.&run( data, n )
+    else
+        scattered = split_fastq( data, n, splitter_jar )
 
     emit:
 
-    to_map
+    scattered
 }
 
 workflow mapper_wf_single {
@@ -120,7 +122,7 @@ workflow scattergather {
                 acc
             })
         keyToMeta = x.map{ meta, fq -> [ keyFun.&call(meta), meta ] }
-        scatter( x, n )
+        scatter( x, n, options.scatterer )
         to_map = scatter.out
             .flatMap{ meta, parts ->
                 parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }

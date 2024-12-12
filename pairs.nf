@@ -22,12 +22,12 @@ workflow scattergather_pairs {
         def readIdKey = options.readIdKey ?: 'read_id'
         def keyFun = options.keyFun ?: { meta -> meta.id }
 
-        r1_parts = scatter_r1( by_read.r1, n )
+        r1_parts = scatter_r1( by_read.r1, n, options.scatterer )
             .flatMap{ meta, parts ->
                 parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
             }
 
-        r2_parts = scatter_r2( by_read.r2, n )
+        r2_parts = scatter_r2( by_read.r2, n, options.scatterer )
             .flatMap{ meta, parts ->
                 parts.withIndex().collect{ part, idx -> [ meta + [ (partIdKey): idx ], part ] }
             }
