@@ -1,6 +1,6 @@
 # Scatter-Gather Module
 
-A Nextflow module implementing the split-apply-combine pattern for parallel processing of FASTQ files. This module handles the splitting of input files into chunks, parallel processing, and subsequent concatenation of results.
+A Nextflow module implementing the split-apply-combine pattern for parallel processing of files. While originally designed for FASTQ files, the module now supports arbitrary file types through custom scatter and gather implementations. This module handles the splitting of input files into chunks, parallel processing, and subsequent concatenation of results.
 
 ## Setup and Dependencies
 
@@ -101,19 +101,103 @@ workflow mapper_wf {
 }
 ```
 
-### Customizing Grouping
+### Configuration Options
 
-By default, files are grouped for recombination using the `id` field from the meta map. You can customize this by providing a closure in the options:
+The module accepts several options to customize its behavior:
 
 ```nextflow
-scattergather(
-    input_ch,
-    5,
-    your_mapper_wf,
-    [
-        keyFun: { meta -> meta.sample_name } // Use sample_name instead of id
-    ]
-)
+[
+    keyFun: { meta -> meta.sample_name },  // Function to generate grouping key from meta (default: meta.id)
+    partIdKey: 'chunk_id',                 // Key used in meta to track chunk IDs (default: 'uuid')
+    readIdKey: 'read_num',                 // Key used in meta to track read pairs (default: 'read_id')
+    scatterer: custom_scatter_process,      // Custom process to split input files (default: split_fastq)
+    gatherer: custom_gather_process         // Custom process to combine output files (default: gather_fastqs)
+]
+```
+
+### Single-end vs Paired-end Reads
+
+The module automatically handles both single-end and paired-end reads through separate workflows:
+
+#### Single-end Usage
+```nextflow
+include { scattergather } from '/path/to/module'
+
+workflow {
+    input_ch = channel.of(
+        [ [id:'sample1'], file('sample1.fq.gz') ]
+    )
+    
+    scattergather(
+        input_ch,
+        5,
+        mapper_wf_single,
+        [:]
+    )
+}
+```
+
+#### Paired-end Usage
+```nextflow
+include { scattergather_pairs } from '/path/to/module'
+
+workflow {
+    input_ch = channel.of(
+        [ [id:'sample1'], file('R1.fq.gz'), file('R2.fq.gz') ]
+    )
+    
+    scattergather_pairs(
+        input_ch,
+        5,
+        mapper_wf_pairs,
+        [:]
+    )
+}
+```
+
+### Custom Scatter/Gather Operations
+
+While the module provides default implementations for FASTQ files, you can provide custom scatter and gather processes for other file types:
+
+```nextflow
+// Custom scatter process example
+process custom_scatter {
+    input:
+        tuple val(meta), path(input)
+        val(n_chunks)
+    output:
+        tuple val(meta), path('chunk*')
+    script:
+    """
+    # Your custom splitting logic here
+    split -n $n_chunks $input chunk
+    """
+}
+
+// Custom gather process example
+process custom_gather {
+    input:
+        tuple val(id), path('chunk*')
+    output:
+        tuple val(id), path('combined')
+    script:
+    """
+    # Your custom combining logic here
+    cat chunk* > combined
+    """
+}
+
+workflow {
+    scattergather(
+        input_ch,
+        5,
+        your_mapper_wf,
+        [
+            scatterer: custom_scatter,
+            gatherer: custom_gather
+        ]
+    )
+}
 ```
 
 ### Example: Parallel UMI-tools Extract
