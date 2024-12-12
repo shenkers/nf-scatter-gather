@@ -5,20 +5,16 @@ workflow scatter {
 
     data // meta, fastq
     n // number of splits
-    mapper // function to apply to the shards, should take [meta,fq]
 
     main:
 
     split_fastq( data, n, splitter_jar )
 
     to_map = split_fastq.out
-        .flatMap{ meta, parts -> parts.collect{ [ meta, it ] } }
-
-    mapper_out = mapper.&run( to_map )
 
     emit:
 
-    out = mapper_out
+    to_map
 }
 
 //keep
