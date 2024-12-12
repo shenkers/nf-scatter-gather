@@ -1,4 +1,4 @@
-include {mapper_wf} from './'
+include {mapper_wf_pairs} from './pairs'
 include {scattergather_pairs} from './pairs'
 params.out_dir = 'out_pairs'
 include {publish} from '../publish/publish'
@@ -9,7 +9,7 @@ x = channel.of(
 )
 
 workflow {
-    out = scattergather_pairs( x, 5, mapper_wf, [:] )
+    out = scattergather_pairs( x, 5, mapper_wf_pairs, [:] )
     out[0].dump(tag:'result')
     publish(
         channel.empty().mix(out.map{ meta, r1, r2 -> [ '', "${meta.id}_1.fq.gz", r1 ] },

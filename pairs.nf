@@ -1,6 +1,5 @@
 include {scatter as scatter_r1; scatter as scatter_r2} from './'
 include {gather as gather_r1; gather as gather_r2} from './'
-include {assign_uuid} from './'
 
 // TODO create a top-level scatter gather that routes to single/pairs depending on cardinality
 workflow scattergather_pairs {
@@ -64,4 +63,26 @@ workflow scattergather_pairs {
     emit:
         //channel.empty() // gathered
         gathered
+}
+
+workflow mapper_wf_pairs {
+    take:
+        x
+
+    main:
+        mapper_process_pairs(x)
+
+    emit:
+        mapper_process_pairs.out
+}
+
+process mapper_process_pairs {
+    input:
+        tuple val(id), path(part1,stageAs:'r1'), path(part2,stageAs:'r2')
+
+    output:
+        tuple val(id), path(part1), path(part2)
+
+    script:
+    "echo hi"
 }

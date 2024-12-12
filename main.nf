@@ -30,18 +30,18 @@ workflow scatter {
     to_map
 }
 
-workflow mapper_wf {
+workflow mapper_wf_pairs {
     take:
         x
 
     main:
-        mapper_process(x)
+        mapper_process_pairs(x)
 
     emit:
-        mapper_process.out
+        mapper_process_pairs.out
 }
 
-process mapper_process {
+process mapper_process_pairs {
     input:
         tuple val(id), path(part1,stageAs:'r1'), path(part2,stageAs:'r2')
 
